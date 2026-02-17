@@ -159,28 +159,63 @@ def build_dependency_graph(concepts: Dict[str, dict], edges: List[dict]) -> dict
 
 
 # =========================================================
-# C) Unlock Logic (Optional)
+# C) Unlock + Blocked Reasons (XAI Ready)
 # =========================================================
 
-def compute_unlocked(reverse_adjacency: dict,
-                     mastery: Dict[str, float],
-                     threshold: float = 0.7) -> List[str]:
+def compute_unlocked_and_blocked(reverse_adjacency: dict,
+                                 mastery: Dict[str, float],
+                                 threshold: float = 0.7) -> dict:
+    """
+    Returns:
+        {
+            "unlocked": [...],
+            "blocked": [
+                {
+                    "concept_id": "P3",
+                    "blocked_by": ["P2"],
+                    "prereq_mastery": {"P2": 0.40},
+                    "threshold": 0.70
+                }
+            ]
+        }
+    """
 
     unlocked = []
+    blocked = []
 
     all_concepts = set(reverse_adjacency.keys())
 
     for concept in all_concepts:
         prereqs = reverse_adjacency.get(concept, [])
 
+        # No prerequisites → automatically unlocked
         if not prereqs:
             unlocked.append(concept)
             continue
 
-        if all(mastery.get(p, 0.0) >= threshold for p in prereqs):
-            unlocked.append(concept)
+        failed = []
+        prereq_mastery = {}
 
-    return unlocked
+        for p in prereqs:
+            m = mastery.get(p, 0.0)
+            prereq_mastery[p] = m
+            if m < threshold:
+                failed.append(p)
+
+        if not failed:
+            unlocked.append(concept)
+        else:
+            blocked.append({
+                "concept_id": concept,
+                "blocked_by": failed,
+                "prereq_mastery": prereq_mastery,
+                "threshold": threshold
+            })
+
+    return {
+        "unlocked": unlocked,
+        "blocked": blocked
+    }
 
 
 # =========================================================
