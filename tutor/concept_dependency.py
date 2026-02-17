@@ -21,6 +21,7 @@ def load_concepts_and_edges(db_paths: List[str]) -> Tuple[Dict[str, dict], List[
         cursor.execute(
             "SELECT concept_id, name, difficulty, description FROM concepts"
         )
+
         for row in cursor.fetchall():
             concept_id = row[0]
             concepts[concept_id] = {
@@ -148,6 +149,7 @@ def build_dependency_graph(concepts: Dict[str, dict], edges: List[dict]) -> dict
     return {
         "concept_index": concept_index,
         "index_concept": index_concept,
+        "concepts": concepts,   # ✅ Important addition
         "edges": valid_edges,
         "adjacency": dict(adjacency),
         "reverse_adjacency": dict(reverse_adjacency),
@@ -159,10 +161,11 @@ def build_dependency_graph(concepts: Dict[str, dict], edges: List[dict]) -> dict
 
 
 # =========================================================
-# C) Unlock + Blocked Reasons (XAI Ready)
+# C) Unlock + Blocked Reasons (XAI Safe Version)
 # =========================================================
 
-def compute_unlocked_and_blocked(reverse_adjacency: dict,
+def compute_unlocked_and_blocked(concepts: Dict[str, dict],
+                                 reverse_adjacency: dict,
                                  mastery: Dict[str, float],
                                  threshold: float = 0.7) -> dict:
     """
@@ -183,12 +186,17 @@ def compute_unlocked_and_blocked(reverse_adjacency: dict,
     unlocked = []
     blocked = []
 
-    all_concepts = set(reverse_adjacency.keys())
+    # ✅ FIX: include ALL concepts safely
+    all_concepts = (
+        set(concepts.keys())
+        | set(reverse_adjacency.keys())
+        | set(mastery.keys())
+    )
 
-    for concept in all_concepts:
+    for concept in sorted(all_concepts):
         prereqs = reverse_adjacency.get(concept, [])
 
-        # No prerequisites → automatically unlocked
+        # No prerequisites → unlocked
         if not prereqs:
             unlocked.append(concept)
             continue

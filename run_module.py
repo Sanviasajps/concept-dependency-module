@@ -3,10 +3,6 @@ from tutor.concept_dependency import (
     compute_unlocked_and_blocked
 )
 
-# =========================================================
-# Database Paths
-# =========================================================
-
 db_paths = [
     "Cognitive_databases/python_learning.db",
     "Cognitive_databases/database_sql.db",
@@ -14,10 +10,6 @@ db_paths = [
     "Cognitive_databases/git_version_control.db",
     "Cognitive_databases/data_structures.db"
 ]
-
-# =========================================================
-# Run Module 3
-# =========================================================
 
 result = run_concept_dependency_module(db_paths)
 
@@ -33,30 +25,25 @@ print("Topological Order (first 10):", result["topological_order"][:10])
 if not result["is_dag"]:
     print("Cycles detected:", result["cycles"])
 
-# =========================================================
-# XAI — Unlock & Blocked Reason Test
-# =========================================================
+# --------------------------------------------------
+# XAI Unlock / Blocked Example
+# --------------------------------------------------
+
+mastery = {
+    "P1": 0.8,
+    "P2": 0.4
+}
+
+unlock_info = compute_unlocked_and_blocked(
+    result["concepts"],
+    result["reverse_adjacency"],
+    mastery,
+    threshold=0.7
+)
 
 print("\n--------------------------------------------------")
 print("Unlock / Blocked (XAI Output)")
 print("--------------------------------------------------")
-
-reverse_adj = result["reverse_adjacency"]
-
-# Example mastery dictionary (for testing)
-# You can change values to test behavior
-mastery = {
-    "P1": 0.8,
-    "P2": 0.4,
-    "D1": 0.9,
-    "S1": 0.6
-}
-
-unlock_info = compute_unlocked_and_blocked(
-    reverse_adj,
-    mastery,
-    threshold=0.7
-)
 
 print("Unlocked Concepts:", unlock_info["unlocked"])
 print("\nBlocked Concepts With Reasons:")
