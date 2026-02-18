@@ -76,7 +76,6 @@ def build_dependency_graph(concepts: Dict[str, dict], edges: List[dict]) -> dict
             reverse_adjacency[c].append(p)
             valid_edges.append(edge)
 
-    # Stable ordering
     concept_ids = sorted(concepts.keys())
     concept_index = {cid: i for i, cid in enumerate(concept_ids)}
     index_concept = concept_ids.copy()
@@ -149,7 +148,7 @@ def build_dependency_graph(concepts: Dict[str, dict], edges: List[dict]) -> dict
     return {
         "concept_index": concept_index,
         "index_concept": index_concept,
-        "concepts": concepts,   # ✅ Important addition
+        "concepts": concepts,  # Needed for XAI-safe unlock
         "edges": valid_edges,
         "adjacency": dict(adjacency),
         "reverse_adjacency": dict(reverse_adjacency),
@@ -168,25 +167,11 @@ def compute_unlocked_and_blocked(concepts: Dict[str, dict],
                                  reverse_adjacency: dict,
                                  mastery: Dict[str, float],
                                  threshold: float = 0.7) -> dict:
-    """
-    Returns:
-        {
-            "unlocked": [...],
-            "blocked": [
-                {
-                    "concept_id": "P3",
-                    "blocked_by": ["P2"],
-                    "prereq_mastery": {"P2": 0.40},
-                    "threshold": 0.70
-                }
-            ]
-        }
-    """
 
     unlocked = []
     blocked = []
 
-    # ✅ FIX: include ALL concepts safely
+    # ✅ Include ALL concepts safely
     all_concepts = (
         set(concepts.keys())
         | set(reverse_adjacency.keys())
@@ -196,7 +181,6 @@ def compute_unlocked_and_blocked(concepts: Dict[str, dict],
     for concept in sorted(all_concepts):
         prereqs = reverse_adjacency.get(concept, [])
 
-        # No prerequisites → unlocked
         if not prereqs:
             unlocked.append(concept)
             continue
@@ -227,7 +211,45 @@ def compute_unlocked_and_blocked(concepts: Dict[str, dict],
 
 
 # =========================================================
-# D) Entry Function
+# D) REQUIRED WRAPPERS FOR MODULE 4
+# =========================================================
+
+def get_unlocked_concepts(mastery_vector: Dict[str, float],
+                          threshold: float,
+                          concept_db_paths: List[str]) -> List[str]:
+
+    concepts, edges = load_concepts_and_edges(concept_db_paths)
+    graph = build_dependency_graph(concepts, edges)
+
+    result = compute_unlocked_and_blocked(
+        graph["concepts"],
+        graph["reverse_adjacency"],
+        mastery_vector,
+        threshold
+    )
+
+    return result["unlocked"]
+
+
+def get_blocked_concepts(mastery_vector: Dict[str, float],
+                         threshold: float,
+                         concept_db_paths: List[str]) -> List[dict]:
+
+    concepts, edges = load_concepts_and_edges(concept_db_paths)
+    graph = build_dependency_graph(concepts, edges)
+
+    result = compute_unlocked_and_blocked(
+        graph["concepts"],
+        graph["reverse_adjacency"],
+        mastery_vector,
+        threshold
+    )
+
+    return result["blocked"]
+
+
+# =========================================================
+# E) Entry Function
 # =========================================================
 
 def run_concept_dependency_module(db_paths: List[str]) -> dict:
